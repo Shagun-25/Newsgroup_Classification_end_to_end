@@ -1,12 +1,12 @@
 import sys
 from dataclasses import dataclass
 
-import numpy as np
+import numpy as np 
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder,StandardScaler
 
 from src.exception import CustomException
 from src.logger import logging
@@ -16,7 +16,7 @@ from src.utils import save_object
 
 @dataclass
 class DataTransformationConfig:
-    preprocessor_obj_file_path=os.path.join('artifact',"preprocessor.pkl")
+    preprocessor_obj_file_path=os.path.join('artifacts',"proprocessor.pkl")
 
 class DataTransformation:
     def __init__(self):
@@ -24,9 +24,9 @@ class DataTransformation:
 
     def get_data_transformer_object(self):
         '''
-        This function is responsible for data transformation
+        This function si responsible for data trnasformation
+        
         '''
-
         try:
             numerical_columns = ["writing_score", "reading_score"]
             categorical_columns = [
@@ -41,6 +41,7 @@ class DataTransformation:
                 steps=[
                 ("imputer",SimpleImputer(strategy="median")),
                 ("scaler",StandardScaler())
+
                 ]
             )
 
@@ -54,14 +55,17 @@ class DataTransformation:
 
             )
 
-            logging.info("Numerical columns standard scaling completed")
-            logging.info("Categorical columns encoding completed")
-            
+            logging.info(f"Categorical columns: {categorical_columns}")
+            logging.info(f"Numerical columns: {numerical_columns}")
+
             preprocessor=ColumnTransformer(
                 [
                 ("num_pipeline",num_pipeline,numerical_columns),
-                ("cat_pipeline",cat_pipeline,categorical_columns)
+                ("cat_pipelines",cat_pipeline,categorical_columns)
+
                 ]
+
+
             )
 
             return preprocessor
@@ -76,6 +80,7 @@ class DataTransformation:
             test_df=pd.read_csv(test_path)
 
             logging.info("Read train and test data completed")
+
             logging.info("Obtaining preprocessing object")
 
             preprocessing_obj=self.get_data_transformer_object()
@@ -117,42 +122,3 @@ class DataTransformation:
             )
         except Exception as e:
             raise CustomException(e,sys)
-        
-    def evaluate_models(X_train, y_train,X_test,y_test,models,param):
-        try:
-            report = {}
-
-            for i in range(len(list(models))):
-                model = list(models.values())[i]
-                para=param[list(models.keys())[i]]
-
-                gs = GridSearchCV(model,para,cv=3)
-                gs.fit(X_train,y_train)
-
-                model.set_params(**gs.best_params_)
-                model.fit(X_train,y_train)
-
-                #model.fit(X_train, y_train)  # Train model
-
-                y_train_pred = model.predict(X_train)
-
-                y_test_pred = model.predict(X_test)
-
-                train_model_score = r2_score(y_train, y_train_pred)
-
-                test_model_score = r2_score(y_test, y_test_pred)
-
-                report[list(models.keys())[i]] = test_model_score
-
-            return report
-
-        except Exception as e:
-            raise CustomException(e, sys)
-    
-    def load_object(file_path):
-        try:
-            with open(file_path, "rb") as file_obj:
-                return pickle.load(file_obj)
-
-        except Exception as e:
-            raise CustomException(e, sys)
