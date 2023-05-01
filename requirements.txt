@@ -1,10 +1,9 @@
 pandas
 numpy
-seaborn
-matplotlib
+tqdm
+nltk
+transformers
+tensorflow
 scikit-learn
-catboost
-xgboost
 dill
-Flask
--e .
+#-e .

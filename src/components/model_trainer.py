@@ -1,23 +1,21 @@
 import os
 import sys
 from dataclasses import dataclass
-
-from catboost import CatBoostRegressor
-from sklearn.ensemble import (
-    AdaBoostRegressor,
-    GradientBoostingRegressor,
-    RandomForestRegressor,
-)
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.tree import DecisionTreeRegressor
-from xgboost import XGBRegressor
+import numpy as np
 
 from src.exception import CustomException
 from src.logger import logging
 
 from src.utils import save_object,evaluate_models
+
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
+from transformers import TFDistilBertForSequenceClassification, TFTrainer, TFTrainingArguments
+
+from transformers import DistilBertTokenizer
+from transformers import TFDistilBertForSequenceClassification
+from transformers import TextClassificationPipeline
+
+import tensorflow as tf
 
 @dataclass
 class ModelTrainerConfig:
@@ -27,6 +25,17 @@ class ModelTrainer:
     def __init__(self):
         self.model_trainer_config=ModelTrainerConfig()
 
+    def compute_metrics(self, p):
+        print(type(p))
+        pred, labels = p
+        pred = np.argmax(pred, axis=1)
+
+        accuracy = accuracy_score(y_true=labels, y_pred=pred)
+        recall = recall_score(y_true=labels, y_pred=pred, average = 'micro')
+        precision = precision_score(y_true=labels, y_pred=pred, average = 'micro')
+        f1 = f1_score(y_true=labels, y_pred=pred, average = 'micro')
+
+        return {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1}
 
     def initiate_model_trainer(self,train_array,test_array):
         try:
@@ -37,79 +46,60 @@ class ModelTrainer:
                 test_array[:,:-1],
                 test_array[:,-1]
             )
-            models = {
-                "Random Forest": RandomForestRegressor(),
-                "Decision Tree": DecisionTreeRegressor(),
-                "Gradient Boosting": GradientBoostingRegressor(),
-                "Linear Regression": LinearRegression(),
-                "XGBRegressor": XGBRegressor(),
-                "CatBoosting Regressor": CatBoostRegressor(verbose=False),
-                "AdaBoost Regressor": AdaBoostRegressor(),
-            }
-            params={
-                "Decision Tree": {
-                    'criterion':['squared_error', 'friedman_mse', 'absolute_error', 'poisson'],
-                    # 'splitter':['best','random'],
-                    # 'max_features':['sqrt','log2'],
-                },
-                "Random Forest":{
-                    # 'criterion':['squared_error', 'friedman_mse', 'absolute_error', 'poisson'],
-                 
-                    # 'max_features':['sqrt','log2',None],
-                    'n_estimators': [8,16,32,64,128,256]
-                },
-                "Gradient Boosting":{
-                    # 'loss':['squared_error', 'huber', 'absolute_error', 'quantile'],
-                    'learning_rate':[.1,.01,.05,.001],
-                    'subsample':[0.6,0.7,0.75,0.8,0.85,0.9],
-                    # 'criterion':['squared_error', 'friedman_mse'],
-                    # 'max_features':['auto','sqrt','log2'],
-                    'n_estimators': [8,16,32,64,128,256]
-                },
-                "Linear Regression":{},
-                "XGBRegressor":{
-                    'learning_rate':[.1,.01,.05,.001],
-                    'n_estimators': [8,16,32,64,128,256]
-                },
-                "CatBoosting Regressor":{
-                    'depth': [6,8,10],
-                    'learning_rate': [0.01, 0.05, 0.1],
-                    'iterations': [30, 50, 100]
-                },
-                "AdaBoost Regressor":{
-                    'learning_rate':[.1,.01,0.5,.001],
-                    # 'loss':['linear','square','exponential'],
-                    'n_estimators': [8,16,32,64,128,256]
-                }
-                
-            }
+            X_train = [str(i) for i in X_train.tolist()]
+            X_test = [str(i) for i in X_test.tolist()]
+            y_train = np.asarray(y_train).astype('float32')
+            y_test = np.asarray(y_test).astype('float32')
 
-            model_report:dict=evaluate_models(X_train=X_train,y_train=y_train,X_test=X_test,y_test=y_test,
-                                             models=models,param=params)
-            
-            ## To get best model score from dict
-            best_model_score = max(sorted(model_report.values()))
+            tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
 
-            ## To get best model name from dict
+            train_encodings = tokenizer(X_train, truncation = True, padding = True)
+            test_encodings = tokenizer(X_test, truncation = True, padding = True)
 
-            best_model_name = list(model_report.keys())[
-                list(model_report.values()).index(best_model_score)
-            ]
-            best_model = models[best_model_name]
+            train_dataset = tf.data.Dataset.from_tensor_slices((
+                dict(train_encodings),
+                y_train
+            ))
 
-            if best_model_score<0.6:
-                raise CustomException("No best model found")
-            logging.info(f"Best found model on both training and testing dataset")
+            test_dataset = tf.data.Dataset.from_tensor_slices((
+                dict(test_encodings),
+                y_test
+            ))
 
-            save_object(
-                file_path=self.model_trainer_config.trained_model_file_path,
-                obj=best_model
+            training_args = TFTrainingArguments(
+                output_dir='./results',          
+                num_train_epochs=1,              
+                per_device_train_batch_size=16,  
+                per_device_eval_batch_size=64,   
+                warmup_steps=500,                
+                weight_decay=1e-5,               
+                logging_dir='./logs',            
+                eval_steps=100                   
             )
 
-            predicted=best_model.predict(X_test)
+            with training_args.strategy.scope():
+                trainer_model = TFDistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels = 20)
 
-            r2_square = r2_score(y_test, predicted)
-            return r2_square
+
+            trainer = TFTrainer(
+                model=trainer_model,                 
+                args=training_args,                  
+                train_dataset=train_dataset,         
+                eval_dataset=test_dataset,  
+                compute_metrics=self.compute_metrics          
+            )
+
+            trainer.train()
+            f1 = trainer.evaluate()
+
+            print("****************************************************************************************************")
+
+            #Saving the model
+            save_directory = "E:/Data_Science/Newsgroup_Classification_end_to_end/artifacts/" 
+            trainer_model.save_pretrained(save_directory)
+            tokenizer.save_pretrained(save_directory)
+
+            return f1
             
         except Exception as e:
             raise CustomException(e,sys)

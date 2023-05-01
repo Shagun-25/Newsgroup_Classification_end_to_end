@@ -3,6 +3,9 @@ import sys
 from src.exception import CustomException
 from src.logger import logging
 import pandas as pd
+from tqdm import tqdm
+import warnings
+warnings.filterwarnings("ignore")
 
 from sklearn.model_selection import train_test_split
 from dataclasses import dataclass
@@ -25,7 +28,23 @@ class DataIngestion:
     def initiate_data_ingestion(self):
         logging.info("Entered the data ingestion method or component")
         try:
-            df=pd.read_csv('notebook\data\stud.csv')
+            # files_dir = os.listdir('E:/Data_Science/Newsgroup_Classification_end_to_end/notebook/data/')
+
+            # df = pd.DataFrame(columns =['filename', 'class', 'text', 'preprocessed_text', 'preprocessed_email', 'preprocessed_subject'])
+            # for docfiles in tqdm(files_dir):
+            #     class_name = str(docfiles)
+            #     docfiles = os.listdir('E:/Data_Science/Newsgroup_Classification_end_to_end/notebook/data/'+docfiles)
+            #     for docfile in docfiles:
+            #         with open(f"{'E:/Data_Science/Newsgroup_Classification_end_to_end/notebook/data/'+class_name+'/'+docfile}", 'r', encoding = 'latin-1') as doc:
+            #             txt = doc.read()
+            #             df = df.append({'filename' : '/content/20_newsgroup/'+class_name+'/'+docfile, 'class' : class_name, 'text' : txt}, ignore_index = True)
+            # print(df.shape)
+
+            df = pd.read_csv(r'E:\Data_Science\Newsgroup_Classification_end_to_end\artifacts\data.csv')
+
+            print(df.sample(1))
+
+            # df=pd.read_csv('notebook\data\stud.csv')
             logging.info('Read the dataset as dataframe')
 
             os.makedirs(os.path.dirname(self.ingestion_config.train_data_path),exist_ok=True)
@@ -55,6 +74,9 @@ if __name__=="__main__":
 
     data_transformation=DataTransformation()
     train_arr,test_arr,_=data_transformation.initiate_data_transformation(train_data,test_data)
+
+    # train_arr.to_csv('artifacts/train_final.csv',index=False,header=True)
+    # test_arr.to_csv('artifacts/test_final.csv',index=False,header=True)
 
     modeltrainer=ModelTrainer()
     print(modeltrainer.initiate_model_trainer(train_arr,test_arr))
