@@ -6,8 +6,6 @@ import numpy as np
 from src.exception import CustomException
 from src.logger import logging
 
-from src.utils import save_object,evaluate_models
-
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from transformers import TFDistilBertForSequenceClassification, TFTrainer, TFTrainingArguments
 
