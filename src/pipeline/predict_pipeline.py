@@ -18,14 +18,20 @@ class PredictPipeline:
             preprocessor=load_object(file_path=preprocessor_path)
             data_scaled=preprocessor.transform(features)
 
+            print('done with preprocessing')
+
             save_directory = "E:/Data_Science/Newsgroup_Classification_end_to_end/artifacts/" 
             tokenizer_fine_tuned = DistilBertTokenizer.from_pretrained(save_directory)
             model_fine_tuned = TFDistilBertForSequenceClassification.from_pretrained(save_directory)
 
+            print('loaded model')
+
+            print(data_scaled.tolist(), data_scaled[0].tolist())
+
             #predicting from the model
 
             predict_input = tokenizer_fine_tuned.encode(
-                data_scaled,
+                data_scaled[0].tolist()[0],
                 truncation = True,
                 padding = True,
                 return_tensors = 'tf'    
@@ -49,42 +55,16 @@ class PredictPipeline:
         except Exception as e:
             raise CustomException(e,sys)
 
-
-
 class CustomData:
     def __init__(  self,
-        gender: str,
-        race_ethnicity: str,
-        parental_level_of_education,
-        lunch: str,
-        test_preparation_course: str,
-        reading_score: int,
-        writing_score: int):
+        text: str):
 
-        self.gender = gender
-
-        self.race_ethnicity = race_ethnicity
-
-        self.parental_level_of_education = parental_level_of_education
-
-        self.lunch = lunch
-
-        self.test_preparation_course = test_preparation_course
-
-        self.reading_score = reading_score
-
-        self.writing_score = writing_score
+        self.text = text
 
     def get_data_as_data_frame(self):
         try:
             custom_data_input_dict = {
-                "gender": [self.gender],
-                "race_ethnicity": [self.race_ethnicity],
-                "parental_level_of_education": [self.parental_level_of_education],
-                "lunch": [self.lunch],
-                "test_preparation_course": [self.test_preparation_course],
-                "reading_score": [self.reading_score],
-                "writing_score": [self.writing_score],
+                "text": [self.text]
             }
 
             return pd.DataFrame(custom_data_input_dict)

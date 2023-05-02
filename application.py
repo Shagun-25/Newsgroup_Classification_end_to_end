@@ -21,25 +21,33 @@ def predict_datapoint():
         return render_template('home.html')
     else:
         data=CustomData(
-            gender=request.form.get('gender'),
-            race_ethnicity=request.form.get('ethnicity'),
-            parental_level_of_education=request.form.get('parental_level_of_education'),
-            lunch=request.form.get('lunch'),
-            test_preparation_course=request.form.get('test_preparation_course'),
-            reading_score=float(request.form.get('writing_score')),
-            writing_score=float(request.form.get('reading_score'))
+            text=request.form.get('text')
 
         )
         pred_df=data.get_data_as_data_frame()
         print(pred_df)
         print("Before Prediction")
 
+        # pred_df=pd.read_csv(r'E:\Data_Science\Newsgroup_Classification_end_to_end\artifacts\test.csv')
+        # pred_df = pred_df.sample(1)
+
+        pred_df['filename'] = ""
+        pred_df['preprocessed_text'] = ""
+        pred_df['preprocessed_email'] = ""
+        pred_df['preprocessed_subject'] = ""
+
+        d = {0: 'alt.atheism', 1: 'comp.graphics', 2: 'comp.os.ms-windows.misc', 3: 'comp.sys.ibm.pc.hardware', 4: 'comp.sys.mac.hardware', 5: 'comp.windows.x', 6: 'misc.forsale', 7: 'rec.autos', 8: 'rec.motorcycles', 9: 'rec.sport.baseball', 10: 'rec.sport.hockey', 11: 'sci.crypt', 12: 'sci.electronics', 13: 'sci.med', 14: 'sci.space', 15: 'soc.religion.christian', 16: 'talk.politics.guns', 17: 'talk.politics.mideast', 18: 'talk.politics.misc', 19: 'talk.religion.misc'}
+
+        print("############################################")
+        print(pred_df['text'])
+        print("############################################")
+
         predict_pipeline=PredictPipeline()
         print("Mid Prediction")
         results=predict_pipeline.predict(pred_df)
+        print(results)
         print("after Prediction")
-        return render_template('home.html',results=results[0])
+        return render_template('home.html',results=d[results])
     
-
 if __name__=="__main__":
     app.run(host="0.0.0.0")

@@ -75,142 +75,169 @@ class ColumnsPreprocessor(BaseEstimator, TransformerMixin):
     def fit(self, X, y = None):
         return self
     def transform(self, X, y = None):
-        #Extracting domain names from emails
-        for row in tqdm(X.itertuples()):
-            match = re.findall(r'[\w\.-]+@[\w\.-]+', row.text)
-            emails = []
-            for email in match:
-                lst = email.split('@')[1].split(".")
-                lst1 = lst.copy()
-                for word in lst1:
-                    if len(word) <= 2 or word == 'com':
-                        lst.remove(word)
-                emails.extend(lst)
-            emails = " ".join(list(set(emails)))
-            X.at[row[0], 'preprocessed_email'] = emails
+        X = X.reset_index(drop=True)
 
-        #Removing emails
-        for row in tqdm(X.itertuples()):
-            X.at[row[0], 'preprocessed_text'] = re.sub(r'[\w\.-]+@[\w\.-]+', " ", row.text)
+        print(X)
 
-        #Extracting Subjets
-        for row in tqdm(X.itertuples()):
-            match = re.findall(r'(Subject:+(.*?)+\n)', row.preprocessed_text)
-            match1 = match[0][0]
-            subject = match1.split(':')[-1].split("\n")[0]
-            subject1 = re.sub('[^A-Za-z0-9 ]+', ' ', subject)
-            subject2 = re.sub(r'(?i)\b[a-z]\b', "", subject1)
-            X.at[row[0], "preprocessed_subject"] = subject2
-            X.at[row[0], 'preprocessed_text'] = re.sub(r'(Subject:+(.*?)+\n)', " ", row.preprocessed_text)
-
-        #Removing sentences starting with "Write to:" or "From:" or "Newsgroups:" or "E-Mail :" or "Reply-To:" or "Sender:" or "Xref:" or "Path:" or "Message-ID:" or "References:"
-        for row in tqdm(X.itertuples()):
-            X.at[row[0], 'preprocessed_text'] = re.sub(r'((From:|Write to:|Newsgroups:|E-Mail :|Reply-To:|Sender:|Xref:|Path:|Message-ID:|References:)+(.*?)+\n)', " ", row.preprocessed_text)
-
-        #Removing all the words between < >
-        for row in tqdm(X.itertuples()):
-            X.at[row[0], 'preprocessed_text'] = re.sub(r'<([^>]+)>', "", row.preprocessed_text)
-
-        #Removing all the words between ( )
-        for row in tqdm(X.itertuples()):
-            X.at[row[0], 'preprocessed_text'] = re.sub(r'\(([^)]+)\)', "", row.preprocessed_text)
-
-        #Removing all the newlines ('\n'), tabs('\t'), "-", "\".
-        for row in tqdm(X.itertuples()):
-            string = X.at[row[0], 'preprocessed_text'].replace('\n', ' ').replace('\t', ' ').replace('-', ' ').replace('\\', ' ')
-            X.at[row[0], 'preprocessed_text'] = string
-
-        #Removing all the words which ends with ":".
-        for row in tqdm(X.itertuples()):
-            X.at[row[0], 'preprocessed_text'] = re.sub(r'\w*:', " ", row.preprocessed_text)
-
-        #Decontracting the text
-        for row in tqdm(X.itertuples()):
-            X.at[row[0], 'preprocessed_text'] = self.decontracted(X.at[row[0], 'preprocessed_text'])
-
-        #Replacing all the digits with space
-        for row in tqdm(X.itertuples()):
-            X.at[row[0], 'preprocessed_text'] = re.sub(r'[\d]', " ", row.preprocessed_text)
-        for row in tqdm(X.itertuples()):
-            X.at[row[0], 'preprocessed_text'] = re.sub(r'[\'"]', " ", row.preprocessed_text)
-
-        #Chunking the data
-        #Removing Locations and Person Names from the text
-
-        # for row in tqdm(X.itertuples()):
-        #     gpe = self.get_continuous_chunks(row.preprocessed_text, 'GPE')
-        #     person = self.get_continuous_chunks(row.preprocessed_text, 'PERSON')
-
-        #     my_sent = row.preprocessed_text
-
-        #     for word in person:
-        #         if len(word.split()) == 1:
-        #             my_sent= my_sent.replace(word, " ")
-        #         else:
-        #             for x in word.split():
-        #                 my_sent= my_sent.replace(word, " ")
-
-        #     for place in gpe:
-        #         if len(place.split()) != 1:
-        #             my_sent= my_sent.replace(" ".join(place.split()), "_".join(place.split()))
-        #         else:
-        #             pass
-            
-        #     X.at[row[0], 'preprocessed_text'] = my_sent
-
-        #Removing '_' from '_word' or 'word_'
-        for row in tqdm(X.itertuples()):
-            mystr = row.preprocessed_text
-            mystr1 = re.sub(r' _', " ", mystr)
-            mystr2 = re.sub(r'_ ', " ", mystr1)
-            mystr3 = re.sub(r'_$', " ", mystr2)
-            mystr4 = re.sub(r'^_', " ", mystr3)
-            X.at[row[0], 'preprocessed_text'] = mystr4
-
-        #Removing 'Oneletter_' and 'Twoletter_' words
-        for row in tqdm(X.itertuples()):
-            X.at[row[0], 'preprocessed_text'] = re.sub(r' \w{1,2}_', " ", row.preprocessed_text)
-
-        #Replacing all the words except "A-Za-z_" with space.
-        for row in tqdm(X.itertuples()):
-            X.at[row[0], 'preprocessed_text'] = re.sub(r'[^A-Za-z_]', " ", row.preprocessed_text)
-
-        #Converting in lower case and removing words with length >= 15 and <= 2
-        for row in tqdm(X.itertuples()):
-            mystr = row.preprocessed_text
-            mystr = mystr.lower()
-            mystr_list = mystr.split()
-            x = mystr_list.copy()
-            for word in mystr_list:
-                if len(word) >= 15 or len(word) <= 2:
-                    x.remove(word)
-                else:
-                    pass
-            joined_mystr = " ".join(x)
-            X.at[row[0], 'preprocessed_text'] = joined_mystr
-            X.at[row[0], 'preprocessed_subject'] = row.preprocessed_subject
-            X.at[row[0], 'preprocessed_email'] = row.preprocessed_email
-
-        #Removing trailing spaces and multiple spaces
-        for row in tqdm(X.itertuples()):
-            mystr = row.preprocessed_text
-            mystr = mystr.strip()
-            X.at[row[0], 'preprocessed_text'] = re.sub(' +', ' ', mystr)
-
-        for row in tqdm(X.itertuples()):
-            X.at[row[0], 'preprocessed_subject'] = str(row.preprocessed_subject).strip()
-            X.at[row[0], 'preprocessed_email'] = str(row.preprocessed_email).strip()
-
-        #Combining preprocessed_text ,preprocessed_subject, preprocessed_email
-        for i in range(len(X)):
-            X.at[i, 'total_preprocessed_text'] = X.at[i, 'preprocessed_email'] + " " + X.at[i, 'preprocessed_subject'] + " " + X.at[i, 'preprocessed_text']
+        X['text']=X['text'].apply(str)
         
-        X['count'] = X['total_preprocessed_text'].apply(lambda a: len(a.split()))
-        X = X[['total_preprocessed_text','count']]
+        try:
+            #Extracting domain names from emails
+            for row in tqdm(X.itertuples()):
+                match = re.findall(r'[\w\.-]+@[\w\.-]+', row.text)
+                emails = []
+                for email in match:
+                    lst = email.split('@')[1].split(".")
+                    lst1 = lst.copy()
+                    for word in lst1:
+                        if len(word) <= 2 or word == 'com':
+                            lst.remove(word)
+                    emails.extend(lst)
+                emails = " ".join(list(set(emails)))
+                X.at[row[0], 'preprocessed_email'] = emails
 
-        print("??????????????????????????????????????????????????????")
-        return X
+            print(X)
 
+            #Removing emails
+            for row in tqdm(X.itertuples()):
+                X.at[row[0], 'preprocessed_text'] = re.sub(r'[\w\.-]+@[\w\.-]+', " ", row.text)
+
+            print("done!")
+            print(X)
+
+            #Extracting Subjets
+            for row in tqdm(X.itertuples()):
+                print("^^^^^^^^^^^^", row.preprocessed_text)
+                match = re.findall(r'(Subject:+(.*?)+\n)', row.preprocessed_text)
+                print(match)
+                match1 = match[0][0]
+                print(match1)
+                subject = match1.split(':')[-1].split("\n")[0]
+                subject1 = re.sub('[^A-Za-z0-9 ]+', ' ', subject)
+                subject2 = re.sub(r'(?i)\b[a-z]\b', "", subject1)
+                print(subject, subject1, subject2)
+                X.at[row[0], "preprocessed_subject"] = subject2
+                print("------------------")
+                X.at[row[0], 'preprocessed_text'] = re.sub(r'(Subject:+(.*?)+\n)', " ", row.preprocessed_text)
+
+            print("donee!")
+            print(type(row.preprocessed_text), row.preprocessed_text, repr(row.preprocessed_text))
+
+            #Removing sentences starting with "Write to:" or "From:" or "Newsgroups:" or "E-Mail :" or "Reply-To:" or "Sender:" or "Xref:" or "Path:" or "Message-ID:" or "References:"
+            for row in tqdm(X.itertuples()):
+                X.at[row[0], 'preprocessed_text'] = re.sub(r'((From:|Write to:|Newsgroups:|E-Mail :|Reply-To:|Sender:|Xref:|Path:|Message-ID:|References:)+(.*?)+\n)', " ", row.preprocessed_text)
+
+            print("doneee!")
+
+            #Removing all the words between < >
+            for row in tqdm(X.itertuples()):
+                X.at[row[0], 'preprocessed_text'] = re.sub(r'<([^>]+)>', "", row.preprocessed_text)
+
+            #Removing all the words between ( )
+            for row in tqdm(X.itertuples()):
+                X.at[row[0], 'preprocessed_text'] = re.sub(r'\(([^)]+)\)', "", row.preprocessed_text)
+
+            #Removing all the newlines ('\n'), tabs('\t'), "-", "\".
+            for row in tqdm(X.itertuples()):
+                string = X.at[row[0], 'preprocessed_text'].replace('\n', ' ').replace('\t', ' ').replace('-', ' ').replace('\\', ' ')
+                X.at[row[0], 'preprocessed_text'] = string
+
+            #Removing all the words which ends with ":".
+            for row in tqdm(X.itertuples()):
+                X.at[row[0], 'preprocessed_text'] = re.sub(r'\w*:', " ", row.preprocessed_text)
+
+            #Decontracting the text
+            for row in tqdm(X.itertuples()):
+                X.at[row[0], 'preprocessed_text'] = self.decontracted(X.at[row[0], 'preprocessed_text'])
+
+            #Replacing all the digits with space
+            for row in tqdm(X.itertuples()):
+                X.at[row[0], 'preprocessed_text'] = re.sub(r'[\d]', " ", row.preprocessed_text)
+            for row in tqdm(X.itertuples()):
+                X.at[row[0], 'preprocessed_text'] = re.sub(r'[\'"]', " ", row.preprocessed_text)
+
+            #Chunking the data
+            #Removing Locations and Person Names from the text
+
+            # for row in tqdm(X.itertuples()):
+            #     gpe = self.get_continuous_chunks(row.preprocessed_text, 'GPE')
+            #     person = self.get_continuous_chunks(row.preprocessed_text, 'PERSON')
+
+            #     my_sent = row.preprocessed_text
+
+            #     for word in person:
+            #         if len(word.split()) == 1:
+            #             my_sent= my_sent.replace(word, " ")
+            #         else:
+            #             for x in word.split():
+            #                 my_sent= my_sent.replace(word, " ")
+
+            #     for place in gpe:
+            #         if len(place.split()) != 1:
+            #             my_sent= my_sent.replace(" ".join(place.split()), "_".join(place.split()))
+            #         else:
+            #             pass
+                
+            #     X.at[row[0], 'preprocessed_text'] = my_sent
+
+            #Removing '_' from '_word' or 'word_'
+            for row in tqdm(X.itertuples()):
+                mystr = row.preprocessed_text
+                mystr1 = re.sub(r' _', " ", mystr)
+                mystr2 = re.sub(r'_ ', " ", mystr1)
+                mystr3 = re.sub(r'_$', " ", mystr2)
+                mystr4 = re.sub(r'^_', " ", mystr3)
+                X.at[row[0], 'preprocessed_text'] = mystr4
+
+            #Removing 'Oneletter_' and 'Twoletter_' words
+            for row in tqdm(X.itertuples()):
+                X.at[row[0], 'preprocessed_text'] = re.sub(r' \w{1,2}_', " ", row.preprocessed_text)
+
+            #Replacing all the words except "A-Za-z_" with space.
+            for row in tqdm(X.itertuples()):
+                X.at[row[0], 'preprocessed_text'] = re.sub(r'[^A-Za-z_]', " ", row.preprocessed_text)
+
+            #Converting in lower case and removing words with length >= 15 and <= 2
+            for row in tqdm(X.itertuples()):
+                mystr = row.preprocessed_text
+                mystr = mystr.lower()
+                mystr_list = mystr.split()
+                x = mystr_list.copy()
+                for word in mystr_list:
+                    if len(word) >= 15 or len(word) <= 2:
+                        x.remove(word)
+                    else:
+                        pass
+                joined_mystr = " ".join(x)
+                X.at[row[0], 'preprocessed_text'] = joined_mystr
+                X.at[row[0], 'preprocessed_subject'] = row.preprocessed_subject
+                X.at[row[0], 'preprocessed_email'] = row.preprocessed_email
+
+            #Removing trailing spaces and multiple spaces
+            for row in tqdm(X.itertuples()):
+                mystr = row.preprocessed_text
+                mystr = mystr.strip()
+                X.at[row[0], 'preprocessed_text'] = re.sub(' +', ' ', mystr)
+
+            for row in tqdm(X.itertuples()):
+                X.at[row[0], 'preprocessed_subject'] = str(row.preprocessed_subject).strip()
+                X.at[row[0], 'preprocessed_email'] = str(row.preprocessed_email).strip()
+
+            print(X)
+            print(len(X))
+            #Combining preprocessed_text ,preprocessed_subject, preprocessed_email
+            for i in range(len(X)):
+                X.at[i, 'total_preprocessed_text'] = X.at[i, 'preprocessed_email'] + " " + X.at[i, 'preprocessed_subject'] + " " + X.at[i, 'preprocessed_text']
+            
+            X['count'] = X['total_preprocessed_text'].apply(lambda a: len(a.split()))
+            X = X[['total_preprocessed_text','count']]
+
+            print("??????????????????????????????????????????????????????")
+            return X
+
+        except Exception as e:
+            raise CustomException(e,sys)
+        
 class DataTransformation:
     def __init__(self):
         self.data_transformation_config=DataTransformationConfig()
@@ -256,8 +283,14 @@ class DataTransformation:
             target_column_name="class"
             text_columns = ["text"]
 
-            train_df['class'] = train_df['class'].astype('category').cat.codes
-            test_df['class'] = test_df['class'].astype('category').cat.codes
+            d = {0: 'alt.atheism', 1: 'comp.graphics', 2: 'comp.os.ms-windows.misc', 3: 'comp.sys.ibm.pc.hardware', 4: 'comp.sys.mac.hardware', 5: 'comp.windows.x', 6: 'misc.forsale', 7: 'rec.autos', 8: 'rec.motorcycles', 9: 'rec.sport.baseball', 10: 'rec.sport.hockey', 11: 'sci.crypt', 12: 'sci.electronics', 13: 'sci.med', 14: 'sci.space', 15: 'soc.religion.christian', 16: 'talk.politics.guns', 17: 'talk.politics.mideast', 18: 'talk.politics.misc', 19: 'talk.religion.misc'}
+            d = {v: k for k, v in d.items()}
+
+            train_df = train_df.replace({"class": d})
+            test_df = test_df.replace({"class": d})
+
+            # train_df['class'] = train_df['class'].astype('category').cat.codes
+            # test_df['class'] = test_df['class'].astype('category').cat.codes
 
             input_feature_train_df=train_df.drop(columns=[target_column_name],axis=1)
             target_feature_train_df=train_df[target_column_name]
@@ -289,6 +322,7 @@ class DataTransformation:
                 train_arr,
                 test_arr,
                 self.data_transformation_config.preprocessor_obj_file_path,
+                d
             )
         except Exception as e:
             raise CustomException(e,sys)

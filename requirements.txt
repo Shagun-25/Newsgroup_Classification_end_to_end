@@ -6,4 +6,5 @@ transformers
 tensorflow
 scikit-learn
 dill
+Flask
 #-e .
