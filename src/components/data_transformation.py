@@ -4,16 +4,13 @@ from dataclasses import dataclass
 import numpy as np 
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder,StandardScaler
 from tqdm import tqdm
 import re
 import warnings
 warnings.filterwarnings("ignore")
 
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.utils.validation import check_is_fitted
 
 from src.exception import CustomException
 from src.logger import logging
@@ -33,7 +30,6 @@ class DataTransformationConfig:
 class ColumnsPreprocessor(BaseEstimator, TransformerMixin):
     # initializer 
     def __init__(self):
-        # save the features list internally in the class
         pass
 
     def decontracted(self, phrase):
@@ -77,8 +73,6 @@ class ColumnsPreprocessor(BaseEstimator, TransformerMixin):
     def transform(self, X, y = None):
         X = X.reset_index(drop=True)
 
-        print(X)
-
         X['text']=X['text'].apply(str)
         
         try:
@@ -96,38 +90,23 @@ class ColumnsPreprocessor(BaseEstimator, TransformerMixin):
                 emails = " ".join(list(set(emails)))
                 X.at[row[0], 'preprocessed_email'] = emails
 
-            print(X)
-
             #Removing emails
             for row in tqdm(X.itertuples()):
                 X.at[row[0], 'preprocessed_text'] = re.sub(r'[\w\.-]+@[\w\.-]+', " ", row.text)
 
-            print("done!")
-            print(X)
-
             #Extracting Subjets
             for row in tqdm(X.itertuples()):
-                print("^^^^^^^^^^^^", row.preprocessed_text)
                 match = re.findall(r'(Subject:+(.*?)+\n)', row.preprocessed_text)
-                print(match)
                 match1 = match[0][0]
-                print(match1)
                 subject = match1.split(':')[-1].split("\n")[0]
                 subject1 = re.sub('[^A-Za-z0-9 ]+', ' ', subject)
                 subject2 = re.sub(r'(?i)\b[a-z]\b', "", subject1)
-                print(subject, subject1, subject2)
                 X.at[row[0], "preprocessed_subject"] = subject2
-                print("------------------")
                 X.at[row[0], 'preprocessed_text'] = re.sub(r'(Subject:+(.*?)+\n)', " ", row.preprocessed_text)
-
-            print("donee!")
-            print(type(row.preprocessed_text), row.preprocessed_text, repr(row.preprocessed_text))
 
             #Removing sentences starting with "Write to:" or "From:" or "Newsgroups:" or "E-Mail :" or "Reply-To:" or "Sender:" or "Xref:" or "Path:" or "Message-ID:" or "References:"
             for row in tqdm(X.itertuples()):
                 X.at[row[0], 'preprocessed_text'] = re.sub(r'((From:|Write to:|Newsgroups:|E-Mail :|Reply-To:|Sender:|Xref:|Path:|Message-ID:|References:)+(.*?)+\n)', " ", row.preprocessed_text)
-
-            print("doneee!")
 
             #Removing all the words between < >
             for row in tqdm(X.itertuples()):
@@ -223,8 +202,6 @@ class ColumnsPreprocessor(BaseEstimator, TransformerMixin):
                 X.at[row[0], 'preprocessed_subject'] = str(row.preprocessed_subject).strip()
                 X.at[row[0], 'preprocessed_email'] = str(row.preprocessed_email).strip()
 
-            print(X)
-            print(len(X))
             #Combining preprocessed_text ,preprocessed_subject, preprocessed_email
             for i in range(len(X)):
                 X.at[i, 'total_preprocessed_text'] = X.at[i, 'preprocessed_email'] + " " + X.at[i, 'preprocessed_subject'] + " " + X.at[i, 'preprocessed_text']
@@ -232,7 +209,6 @@ class ColumnsPreprocessor(BaseEstimator, TransformerMixin):
             X['count'] = X['total_preprocessed_text'].apply(lambda a: len(a.split()))
             X = X[['total_preprocessed_text','count']]
 
-            print("??????????????????????????????????????????????????????")
             return X
 
         except Exception as e:

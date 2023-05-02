@@ -8,23 +8,21 @@ from src.logger import logging
 
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 from transformers import TFDistilBertForSequenceClassification, TFTrainer, TFTrainingArguments
-
 from transformers import DistilBertTokenizer
 from transformers import TFDistilBertForSequenceClassification
-from transformers import TextClassificationPipeline
 
 import tensorflow as tf
 
 @dataclass
-class ModelTrainerConfig:
-    trained_model_file_path=os.path.join("artifacts","model.pkl")
+# class ModelTrainerConfig:
+#     trained_model_file_path=os.path.join("artifacts","model.pkl")
 
 class ModelTrainer:
     def __init__(self):
-        self.model_trainer_config=ModelTrainerConfig()
+        # self.model_trainer_config=ModelTrainerConfig()
+        pass
 
     def compute_metrics(self, p):
-        print(type(p))
         pred, labels = p
         pred = np.argmax(pred, axis=1)
 
@@ -66,7 +64,7 @@ class ModelTrainer:
 
             training_args = TFTrainingArguments(
                 output_dir='./results',          
-                num_train_epochs=1,              
+                num_train_epochs=3,              
                 per_device_train_batch_size=16,  
                 per_device_eval_batch_size=64,   
                 warmup_steps=500,                
@@ -78,7 +76,6 @@ class ModelTrainer:
             with training_args.strategy.scope():
                 trainer_model = TFDistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels = 20)
 
-
             trainer = TFTrainer(
                 model=trainer_model,                 
                 args=training_args,                  
@@ -89,8 +86,6 @@ class ModelTrainer:
 
             trainer.train()
             f1 = trainer.evaluate()
-
-            print("****************************************************************************************************")
 
             #Saving the model
             save_directory = "E:/Data_Science/Newsgroup_Classification_end_to_end/artifacts/" 
