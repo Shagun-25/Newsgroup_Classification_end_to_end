@@ -14,12 +14,8 @@ from transformers import TFDistilBertForSequenceClassification
 import tensorflow as tf
 
 @dataclass
-# class ModelTrainerConfig:
-#     trained_model_file_path=os.path.join("artifacts","model.pkl")
-
 class ModelTrainer:
     def __init__(self):
-        # self.model_trainer_config=ModelTrainerConfig()
         pass
 
     def compute_metrics(self, p):

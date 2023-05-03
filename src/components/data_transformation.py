@@ -11,11 +11,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from sklearn.base import BaseEstimator, TransformerMixin
-
 from src.exception import CustomException
 from src.logger import logging
 import os
-
 import nltk
 from nltk import word_tokenize, pos_tag, ne_chunk
 from nltk import Tree
@@ -138,26 +136,26 @@ class ColumnsPreprocessor(BaseEstimator, TransformerMixin):
             #Chunking the data
             #Removing Locations and Person Names from the text
 
-            # for row in tqdm(X.itertuples()):
-            #     gpe = self.get_continuous_chunks(row.preprocessed_text, 'GPE')
-            #     person = self.get_continuous_chunks(row.preprocessed_text, 'PERSON')
+            for row in tqdm(X.itertuples()):
+                gpe = self.get_continuous_chunks(row.preprocessed_text, 'GPE')
+                person = self.get_continuous_chunks(row.preprocessed_text, 'PERSON')
 
-            #     my_sent = row.preprocessed_text
+                my_sent = row.preprocessed_text
 
-            #     for word in person:
-            #         if len(word.split()) == 1:
-            #             my_sent= my_sent.replace(word, " ")
-            #         else:
-            #             for x in word.split():
-            #                 my_sent= my_sent.replace(word, " ")
+                for word in person:
+                    if len(word.split()) == 1:
+                        my_sent= my_sent.replace(word, " ")
+                    else:
+                        for x in word.split():
+                            my_sent= my_sent.replace(word, " ")
 
-            #     for place in gpe:
-            #         if len(place.split()) != 1:
-            #             my_sent= my_sent.replace(" ".join(place.split()), "_".join(place.split()))
-            #         else:
-            #             pass
+                for place in gpe:
+                    if len(place.split()) != 1:
+                        my_sent= my_sent.replace(" ".join(place.split()), "_".join(place.split()))
+                    else:
+                        pass
                 
-            #     X.at[row[0], 'preprocessed_text'] = my_sent
+                X.at[row[0], 'preprocessed_text'] = my_sent
 
             #Removing '_' from '_word' or 'word_'
             for row in tqdm(X.itertuples()):
@@ -220,7 +218,7 @@ class DataTransformation:
 
     def get_data_transformer_object(self):
         '''
-        This function is responsible for data trnasformation
+        This function is responsible for data transformation
         '''
         try:
             text_columns = ["text"]

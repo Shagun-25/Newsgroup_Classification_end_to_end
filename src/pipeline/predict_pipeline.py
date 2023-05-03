@@ -18,15 +18,9 @@ class PredictPipeline:
             preprocessor=load_object(file_path=preprocessor_path)
             data_scaled=preprocessor.transform(features)
 
-            print('done with preprocessing')
-
             save_directory = "E:/Data_Science/Newsgroup_Classification_end_to_end/artifacts/"
             tokenizer_fine_tuned = DistilBertTokenizer.from_pretrained(save_directory)
             model_fine_tuned = TFDistilBertForSequenceClassification.from_pretrained(save_directory)
-
-            print('loaded model')
-
-            print(data_scaled.tolist(), data_scaled[0].tolist())
 
             #predicting from the model
 
